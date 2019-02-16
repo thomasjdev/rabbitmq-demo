@@ -9,6 +9,8 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 
+import java.util.concurrent.TimeUnit;
+
 @SpringBootApplication
 public class Application {
 
@@ -31,7 +33,12 @@ public class Application {
     public CommandLineRunner run() throws Exception {
         return args -> {
             log.info("Ready to read");
-            rabbitTemplate.convertAndSend(Application.topicExchangeName, "foo.bar.baz", "Hello from RabbitMQ!");
+
+            while (true) {
+                rabbitTemplate.convertAndSend(Application.topicExchangeName, "foo.bar.baz", "Hello from RabbitMQ!");
+                TimeUnit.MILLISECONDS.sleep(100);
+            }
+
 
         };
     }
