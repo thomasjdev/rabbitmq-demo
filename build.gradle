@@ -1,0 +1,101 @@
+buildscript {
+    ext {
+        springBootVersion = '2.1.3.RELEASE'
+        springDependencyManagment = '1.0.6.RELEASE'
+    }
+    repositories {
+        jcenter()
+    }
+    dependencies {
+        classpath("io.spring.gradle:dependency-management-plugin:${springDependencyManagment}")
+        classpath("org.springframework.boot:spring-boot-gradle-plugin:${springBootVersion}")
+        classpath(group: 'org.jfrog.buildinfo', name: 'build-info-extractor-gradle', version: '4.+')
+    }
+}
+
+allprojects {
+    apply plugin: 'idea'
+    apply plugin: 'eclipse'
+    apply plugin: 'com.jfrog.artifactory'
+    configure(subprojects.findAll { new File(it.projectDir, 'src').directory }) {
+        apply plugin: 'java'
+    }
+
+    group = 'com.thomasjdev.rabbitmq-demo'
+//    version = System.getenv('CI_COMMIT_TAG') ?: versioning.info.display
+//    ext.repo = version.endsWith('SNAPSHOT') ? 'libs-snapshot-local' : 'libs-release-local'
+
+    repositories {
+        jcenter()
+    }
+}
+
+
+artifactoryPublish.skip = true
+
+subprojects {
+    version = rootProject.version
+    apply plugin: 'maven'
+    if (project.plugins.hasPlugin('java')) {
+        sourceCompatibility = 1.8
+        targetCompatibility = 1.8
+
+        buildDir = "${rootProject.buildDir}/${project.name}"
+
+        apply plugin: "io.spring.dependency-management"
+
+        manifest {
+            attributes "provider": "gradle"
+        }
+        dependencies {
+            testImplementation("org.mockito:mockito-core")
+        }
+        configurations {
+            // Creates a configuration object to use in other parts of the build
+            published
+        }
+        task sourceJar(type: Jar) {
+            from sourceSets.main.allSource
+            classifier = "sources"
+        }
+        task javadocJar(type: Jar, dependsOn: javadoc) {
+            classifier = "javadoc"
+            from javadoc.destinationDir
+        }
+        artifactoryPublish {
+            dependsOn sourceJar
+        }
+        artifacts {
+            published sourceJar
+            published javadocJar
+        }
+    }
+}
+
+
+project(":queue-reader") {
+    apply plugin: "org.springframework.boot"
+
+    dependencies {
+        implementation("org.springframework.boot:spring-boot-starter-amqp")
+        testImplementation("junit:junit")
+    }
+
+    task printBootJar() {
+        println(tasks.bootJar.outputs.files.singleFile.name)
+    }
+}
+
+project(":queue-writer") {
+    apply plugin: "org.springframework.boot"
+
+    dependencies {
+        implementation("org.springframework.boot:spring-boot-starter-amqp")
+        testImplementation("junit:junit")
+    }
+
+    task printBootJar() {
+        println(tasks.bootJar.outputs.files.singleFile.name)
+    }
+}
+
